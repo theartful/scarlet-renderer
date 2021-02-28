@@ -4,6 +4,7 @@ use std::ops::Neg;
 
 pub type Float = f64;
 pub type Int = i32;
+pub type UInt = u32;
 
 pub trait LowestHighest {
     fn lowest() -> Self;

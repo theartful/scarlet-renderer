@@ -154,15 +154,15 @@ pub struct Transform<T: GFloat> {
 }
 
 impl<T: GFloat> Transform<T> {
-    pub fn new() -> Self {
+    pub fn init(m: Matrix4x4<T>, minv: Matrix4x4<T>) -> Self {
+        Transform { m, minv }
+    }
+
+    pub fn identity() -> Self {
         Transform {
             m: Matrix4x4::<T>::identity(),
             minv: Matrix4x4::<T>::identity(),
         }
-    }
-
-    pub fn init(m: Matrix4x4<T>, minv: Matrix4x4<T>) -> Self {
-        Transform { m, minv }
     }
 
     fn init_from_orthogonal_basis(
@@ -312,7 +312,7 @@ impl<T: GFloat> Transform<T> {
         let z_u = (target - pos).normalize();
         let x_u = up_u.cross(z_u).normalize();
         let y_u = z_u.cross(x_u);
-        Self::init_from_orthogonal_basis(target, x_u, y_u, z_u)
+        Self::init_from_orthogonal_basis(pos, x_u, y_u, z_u)
     }
 
     pub fn matrix(&self) -> Matrix4x4<T> {

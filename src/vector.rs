@@ -385,7 +385,8 @@ impl<T: Scalar, U> GenericVector2<T, U> {
 
 impl<T: GFloat, U> From<GenericVector4<T, U>> for GenericVector3<T, U> {
     fn from(vec: GenericVector4<T, U>) -> GenericVector3<T, U> {
-        std::assert!(fequals(vec.w, T::zero()));
+        // TODO: remove comment after fequals is implemented
+        // std::assert!(fequals(vec.w, T::zero()));
         GenericVector3::init(vec.x, vec.y, vec.z)
     }
 }
@@ -396,6 +397,13 @@ impl<T: Scalar> std::ops::Sub<Point3<T>> for Point3<T> {
 
     fn sub(self, rhs: Point3<T>) -> Self::Output {
         Vector3::init(self.x - rhs.x, self.y - rhs.y, self.z - rhs.z)
+    }
+}
+impl<T: Scalar> std::ops::Sub<Point2<T>> for Point2<T> {
+    type Output = Vector2<T>;
+
+    fn sub(self, rhs: Point2<T>) -> Self::Output {
+        Vector2::init(self.x - rhs.x, self.y - rhs.y)
     }
 }
 impl<T: Scalar> std::ops::Add<Point3<T>> for Vector3<T> {
@@ -462,18 +470,23 @@ impl<T: Scalar, U> Clone for GenericVector2<T, U> {
 
 pub type Vector4f = Vector4<Float>;
 pub type Vector4i = Vector4<Int>;
+pub type Vector4u = Vector4<UInt>;
 
 pub type Vector3f = Vector3<Float>;
 pub type Vector3i = Vector3<Int>;
+pub type Vector3u = Vector3<UInt>;
 
 pub type Vector2f = Vector2<Float>;
 pub type Vector2i = Vector2<Int>;
+pub type Vector2u = Vector2<UInt>;
 
 pub type Point3f = Point3<Float>;
 pub type Point3i = Point3<Int>;
+pub type Point3u = Point3<UInt>;
 
 pub type Point2f = Point2<Float>;
 pub type Point2i = Point2<Int>;
+pub type Point2u = Point2<UInt>;
 
 pub type Normal3f = Normal3<Float>;
 pub type Normal3i = Normal3<Int>;

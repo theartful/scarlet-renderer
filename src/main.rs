@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 
 use rand::distributions::{Distribution, Uniform};
+use scarlet::camera::*;
 use scarlet::interpolation::*;
 use scarlet::primitive::*;
 use scarlet::ray::*;
@@ -35,7 +36,6 @@ fn ray_color(ray: Rayfi, primitive: &impl Primitive, depth: u32) -> Vector3f {
     let max_depth = 50;
     if depth >= max_depth {
         return Vector3f::new();
-        // eprintln!("depth = {}", depth);
     }
 
     let mut mut_ray = ray;
@@ -64,18 +64,22 @@ fn ray_color(ray: Rayfi, primitive: &impl Primitive, depth: u32) -> Vector3f {
 
 fn main() {
     let aspect_ratio: Float = 16. / 9.;
-    let image_width: u32 = 1000;
+    let image_width: u32 = 400;
     let image_height: u32 = (image_width as Float / aspect_ratio) as u32;
 
-    let viewport_height: Float = 2.;
-    let viewport_width: Float = aspect_ratio * viewport_height;
     let focal_length = 1.0;
+    let fov = Float::PI * 0.26;
 
-    let origin = Point3f::init(0., 0., 0.);
-    let horizontal = Vector3f::init(viewport_width, 0., 0.);
-    let vertical = Vector3f::init(0., viewport_height, 0.);
-    let lower_left_corner =
-        origin - horizontal / 2. - vertical / 2. - Vector3f::init(0., 0., focal_length);
+    let camera = PerspectiveCamera::init(
+        Transformf::look_at(
+            Point3::init(0., 0., 2.),
+            Point3::init(0., 0., -1.),
+            Vector3f::init(0., 1., 0.),
+        ),
+        focal_length,
+        fov,
+        focal_length / 3.,
+    );
 
     println!("P3");
     println!("{} {}", image_width, image_height);
@@ -95,20 +99,25 @@ fn main() {
 
     let sample_per_pixel = 100;
 
+    let du = 1. / (image_height - 1) as Float;
+    let dv = 1. / (image_width - 1) as Float;
+    let uniform_du = Uniform::new(-du / 2., du / 2.);
+    let uniform_dv = Uniform::new(-dv / 2., dv / 2.);
+    let mut rng = rand::thread_rng();
+
     for jj in 0..image_height {
         let j = image_height - jj - 1;
         for i in 0..image_width {
-            let du = 1. / (image_height - 1) as Float;
-            let dv = 1. / (image_width - 1) as Float;
             let mut color = Vector3f::new();
-            for s in 0..sample_per_pixel {
-                let v = (j as Float / (image_height - 1) as Float)
-                    + (s as Float / (sample_per_pixel - 1) as Float) * du;
-                let u = (i as Float / (image_width - 1) as Float)
-                    + (s as Float / (sample_per_pixel - 1) as Float) * dv;
-                let dir = (lower_left_corner + horizontal * u + vertical * v - origin).normalize();
-                let r = Rayf::init(origin, dir, Float::highest());
-                color += ray_color(Rayfi::from(r), &primitive_list, 0);
+            for _ in 0..sample_per_pixel {
+                let u = 2. * i as Float / (image_width as Float - 1.) - 1.
+                    + uniform_du.sample(&mut rng);
+                let v = 2. * j as Float / (aspect_ratio * (image_height as Float - 1.))
+                    - 1. / aspect_ratio
+                    + uniform_dv.sample(&mut rng);
+                let ray =
+                    camera.generate_ray(CameraSample::init(Point2f::init(u, v), Point2f::new()));
+                color += ray_color(Rayfi::from(ray), &primitive_list, 0);
             }
             write_color(color / sample_per_pixel as Float);
         }
