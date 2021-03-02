@@ -2,7 +2,7 @@ pub use num_traits::Float as NumTraitsGFloat;
 pub use num_traits::{Num, NumAssignOps, One, Zero};
 use std::ops::Neg;
 
-pub type Float = f64;
+pub type Float = f32;
 pub type Int = i32;
 pub type UInt = u32;
 

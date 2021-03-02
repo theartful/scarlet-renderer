@@ -131,9 +131,27 @@ impl Primitive for PrimitiveList {
         }
         result
     }
+    fn intersecti(&self, ray: &mut Rayfi) -> Option<SurfaceInteraction> {
+        let mut result: Option<SurfaceInteraction> = None;
+        for primitive_handle in self.primitives.iter() {
+            match (*primitive_handle).intersecti(ray) {
+                Some(interaction) => result = Some(interaction),
+                None => {}
+            }
+        }
+        result
+    }
     fn fast_intersect(&self, ray: Rayf) -> bool {
         for primitive_handle in self.primitives.iter() {
             if (*primitive_handle).fast_intersect(ray) {
+                return true;
+            }
+        }
+        return false;
+    }
+    fn fast_intersecti(&self, ray: Rayfi) -> bool {
+        for primitive_handle in self.primitives.iter() {
+            if (*primitive_handle).fast_intersecti(ray) {
                 return true;
             }
         }

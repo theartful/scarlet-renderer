@@ -66,7 +66,7 @@ impl<T> Norm for T
 where
     T: InnerProduct<T>,
 {
-    fn square_norm(self) -> Self::ScalarType {
+    default fn square_norm(self) -> Self::ScalarType {
         self.dot(self)
     }
 }

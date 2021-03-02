@@ -498,6 +498,21 @@ pub type Vector3ii = Vector3<Interval<Int>>;
 pub type Point3fi = Point3<Interval<Float>>;
 pub type Point3ii = Point3<Interval<Int>>;
 
+impl<T: GFloat, U> std::ops::Mul<T> for GenericVector3<Interval<T>, U> {
+    type Output = GenericVector3<Interval<T>, U>;
+
+    fn mul(self, rhs: T) -> Self::Output {
+        GenericVector3::init(self.x * rhs, self.y * rhs, self.z * rhs)
+    }
+}
+impl<T: GFloat, U> std::ops::Div<T> for GenericVector3<Interval<T>, U> {
+    type Output = GenericVector3<Interval<T>, U>;
+
+    fn div(self, rhs: T) -> Self::Output {
+        GenericVector3::init(self.x / rhs, self.y / rhs, self.z / rhs)
+    }
+}
+
 impl<T: GFloat, U> From<GenericVector3<T, U>> for GenericVector3<Interval<T>, U> {
     fn from(vec: GenericVector3<T, U>) -> GenericVector3<Interval<T>, U> {
         Self::init(
@@ -510,5 +525,12 @@ impl<T: GFloat, U> From<GenericVector3<T, U>> for GenericVector3<Interval<T>, U>
 impl<T: GFloat, U> From<GenericVector3<Interval<T>, U>> for GenericVector3<T, U> {
     fn from(vec: GenericVector3<Interval<T>, U>) -> GenericVector3<T, U> {
         Self::init(vec.x.approx(), vec.y.approx(), vec.z.approx())
+    }
+}
+
+// this is more accurate than self.dot(self) because of interval arithmetic
+impl Norm for Vector3fi {
+    fn square_norm(self) -> Self::ScalarType {
+        self.x.square() + self.y.square() + self.z.square()
     }
 }

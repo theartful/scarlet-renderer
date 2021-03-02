@@ -1,3 +1,5 @@
+#![feature(min_specialization)]
+
 pub mod accel;
 pub mod bbox;
 pub mod camera;

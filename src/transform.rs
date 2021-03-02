@@ -315,6 +315,25 @@ impl<T: GFloat> Transform<T> {
         Self::init_from_orthogonal_basis(pos, x_u, y_u, z_u)
     }
 
+    pub fn perspective(fov: T, near: T, far: T) -> Self {
+        // constructs perspective matrix on a symmetrical view frustrum
+        // between z=near and z=far
+        // x and y in [-1, 1] x [-1, 1] and z in [0, 1]
+        let e = (fov * T::from(0.5).unwrap()).tan().recip();
+        let mat = Matrix4x4::init([
+            [e, T::zero(), T::zero(), T::zero()],
+            [T::zero(), e, T::zero(), T::zero()],
+            [
+                T::zero(),
+                T::zero(),
+                far / (far - near),
+                -far * near / (far - near),
+            ],
+            [T::zero(), T::zero(), T::one(), T::zero()],
+        ]);
+        Self::init(mat, mat.inverse())
+    }
+
     pub fn matrix(&self) -> Matrix4x4<T> {
         self.m
     }

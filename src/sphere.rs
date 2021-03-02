@@ -22,7 +22,7 @@ pub struct Sphere {
 struct IntersectionParams {
     t: Intervalf,
     // intersection point in object space
-    p: Point3f,
+    p: Point3fi,
     phi: Float,
 }
 
@@ -61,13 +61,9 @@ impl Sphere {
         //      b = 2(o_x d_x + o_y d_y + o_z d_z)
         //      c = o_x^2 + o_y^2 + o_z^2 - r^2
 
-        let a = ray.direction.x.square() + ray.direction.y.square() + ray.direction.z.square();
-        let b = (ray.origin.x * ray.direction.x
-            + ray.origin.y * ray.direction.y
-            + ray.origin.z * ray.direction.z)
-            * 2.;
-        let c = ray.origin.x.square() + ray.origin.y.square() + ray.origin.z.square()
-            - self.radius * self.radius;
+        let a = ray.direction.square_norm();
+        let b = Vector3fi::from(ray.origin).dot(ray.direction) * 2.;
+        let c = Vector3fi::from(ray.origin).square_norm() - self.radius * self.radius;
 
         let (t0, t1) = solve_quadratic(a, b, c)?;
 
@@ -77,19 +73,17 @@ impl Sphere {
             }
 
             // calculate hit point
-            let hit_point = {
-                let p = Point3f::from(ray.origin + ray.direction * t);
-                // refining hit point by projecting it on the sphere
-                (p * self.radius) / Vector3f::from(p).norm()
-            };
+            let hit_point = ray.origin + ray.direction * t;
+            // should I refine hitpoint by projecting it on the sphere instead of using interval
+            // arithmetic?
 
-            if hit_point.z < self.z_min && hit_point.z > self.z_max {
+            if !hit_point.z.in_range(self.z_min, self.z_max) {
                 return None;
             }
 
             let phi = {
                 // atan2 returns in the range [-pi, pi]
-                let tmp = hit_point.y.atan2(hit_point.x);
+                let tmp = hit_point.y.approx().atan2(hit_point.x.approx());
                 if tmp.is_sign_negative() {
                     tmp + 2. * Float::PI
                 } else {
@@ -120,14 +114,9 @@ impl Primitive for Sphere {
         let intersection_params = self.get_intersection_params(*ray)?;
 
         let t = intersection_params.t;
-        let p = intersection_params.p;
+        let p = Point3f::from(intersection_params.p);
         let phi = intersection_params.phi;
-        let theta = clamp(
-            intersection_params.p.z / self.radius,
-            Float::zero(),
-            Float::one(),
-        )
-        .acos();
+        let theta = clamp(p.z / self.radius, Float::zero(), Float::one()).acos();
 
         let sin_theta = theta.sin();
         let (sin_phi, cos_phi) = phi.sin_cos();
@@ -158,7 +147,7 @@ impl Primitive for Sphere {
 
         ray.tmax = t;
         Some(SurfaceInteraction::init(
-            Point3fi::from(p),
+            intersection_params.p,
             Point2f::init(u, v),
             dpdu,
             dpdv,
