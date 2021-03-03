@@ -9,6 +9,7 @@ pub mod interval;
 pub mod primitive;
 pub mod quaternion;
 pub mod ray;
+pub mod samplers;
 pub mod scalar;
 pub mod sphere;
 pub mod transform;

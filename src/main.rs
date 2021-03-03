@@ -4,18 +4,21 @@ use rand::distributions::{Distribution, Uniform};
 use scarlet::camera::*;
 use scarlet::interpolation::*;
 use scarlet::primitive::*;
-use scarlet::ray::*;
 use scarlet::sphere::*;
-use scarlet::vector::*;
 use std::ops::DerefMut;
 
-use rand::SeedableRng;
+// use scarlet::samplers::halton::HaltonSampler;
+use scarlet::samplers::sampler::Sampler;
+use scarlet::samplers::stratified::StratifiedSampler;
+// use scarlet::samplers::uniform::UniformSampler;
 
-static mut rng_box: Option<Box<rand::rngs::StdRng>> = None;
+use rand::{RngCore, SeedableRng};
+
+static mut RNG_BOX: Option<Box<rand::rngs::StdRng>> = None;
 
 fn get_rng() -> &'static mut rand::rngs::StdRng {
     unsafe {
-        match &mut rng_box {
+        match &mut RNG_BOX {
             Some(rng) => rng.deref_mut(),
             None => panic!(),
         }
@@ -24,8 +27,8 @@ fn get_rng() -> &'static mut rand::rngs::StdRng {
 
 fn init_rng() {
     unsafe {
-        rng_box = Some(Box::new(rand::rngs::StdRng::from_seed([
-            0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
+        RNG_BOX = Some(Box::new(rand::rngs::StdRng::from_seed([
+            0, 1, 2, 3, 4, 5, 6, 200, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
             24, 25, 26, 27, 28, 29, 30, 31,
         ])));
     }
@@ -93,8 +96,8 @@ fn main() {
     let image_width: u32 = 1000;
     let image_height: u32 = (image_width as Float / aspect_ratio) as u32;
 
-    let focus_distance = 1.;
-    let lens_radius = 0.01;
+    let focus_distance = 3.;
+    let lens_radius = 0.1;
     let fov = Float::PI * 0.26;
 
     let camera = ThinLensCamera::init(
@@ -128,43 +131,33 @@ fn main() {
 
     let sample_per_pixel = 100;
 
+    let mut sampler = StratifiedSampler::init(sample_per_pixel, rng.next_u64());
+
+    // let mut sampler = UniformSampler::init(rng.next_u64());
+    // let mut sampler = HaltonSampler::init();
+
     let du = 1. / (image_height - 1) as Float;
     let dv = 1. / (image_width - 1) as Float;
-    let uniform_du = Uniform::new(0., du);
-    let uniform_dv = Uniform::new(0., dv);
-    let uniform_aperture = Uniform::new(-1., 1.);
 
     for jj in 0..image_height {
         let j = image_height - jj - 1;
         for i in 0..image_width {
             let mut color = Vector3f::new();
+            let u = 2. * i as Float / (image_width as Float - 1.) - 1.;
+            let v =
+                2. * j as Float / (aspect_ratio * (image_height as Float - 1.)) - 1. / aspect_ratio;
             for _ in 0..sample_per_pixel {
-                let u = 2. * i as Float / (image_width as Float - 1.) - 1. + uniform_du.sample(rng);
-                let v = 2. * j as Float / (aspect_ratio * (image_height as Float - 1.))
-                    - 1. / aspect_ratio
-                    + uniform_dv.sample(rng);
+                let (uu, vv) = sampler.get_2d();
+                let (lens_u, lens_v) = sampler.get_2d();
                 let ray = camera.generate_ray(CameraSample::init(
-                    Point2f::init(u, v),
-                    Point2f::init(uniform_aperture.sample(rng), uniform_aperture.sample(rng)),
+                    Point2f::init(u + uu * du, v + vv * dv),
+                    Point2f::init(lens_u * 2. - 1., lens_v * 2. - 1.),
                 ));
                 color += ray_color(Rayfi::from(ray), &primitive_list, 0);
+                sampler.advance_sample();
             }
+            sampler.advance_pixel();
             write_color(color / sample_per_pixel as Float);
         }
     }
-
-    // let i = 499;
-    // let j = 281;
-    // let u = 2. * i as Float / (image_width as Float - 1.) - 1.;
-    // let v = 2. * j as Float / (aspect_ratio * (image_height as Float - 1.)) - 1. / aspect_ratio;
-    // let mut ray =
-    //     Rayfi::from(camera.generate_ray(CameraSample::init(Point2f::init(u, v), Point2f::new())));
-    // match primitive_list.intersecti(&mut ray) {
-    //     Some(_) => {
-    //         eprintln!("OK OK!\n");
-    //     }
-    //     None => {
-    //         eprintln!("NOT OK AT ALL!\n");
-    //     }
-    // }
 }

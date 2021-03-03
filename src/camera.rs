@@ -92,10 +92,3 @@ impl Camera for ThinLensCamera {
         ))
     }
 }
-
-// TODO
-pub struct OrthographicCamera {
-    view: Transformf,
-    focus_distance: Float,
-    lens_radius: Float,
-}

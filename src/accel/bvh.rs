@@ -1,7 +1,6 @@
 use super::partitioner::*;
 use crate::bbox::*;
 use crate::primitive::*;
-use crate::vector::*;
 
 static MAX_PRIMS_IN_NODE: usize = 8;
 
@@ -10,7 +9,7 @@ pub struct BVHAccel<P: Partitioner> {
     partitioner: P,
 }
 
-enum BVHNode {
+pub enum BVHNode {
     Internal {
         bbox: Bbox3f,
         // near child with respect to the split axis
