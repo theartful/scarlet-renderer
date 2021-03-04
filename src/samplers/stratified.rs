@@ -72,10 +72,35 @@ impl StratifiedSampler {
         }
     }
 
-    #[allow(dead_code)]
+    /// Correlated multi-jittered sampling for sampling 2D points
+    ///
+    /// Works as follows:
+    /// 1 - Sample points in canonical arrangements
+    /// 2 - Permute "x" of each row using the same permutation
+    /// 3 - Permute "y" of each column using the same permuttation
+    /// 4 - Add jitter
+    /// 5 - Return jittered & permuted x and y
+    ///
+    /// Since we use full (sample_count * sample_count) grid, the variance
+    /// resulting from jitter is reduced compared to using a
+    /// (sample_count_sqrt * sample_count_sqrt) grid
     fn cmj(&mut self) -> (Float, Float) {
-        // correlated multi-jittered sampling
-        let (i, j) = self.cmj_ij(self.current_sample);
+        let cmj_ij = |index: u32| -> (u32, u32) {
+            (
+                index / self.sample_count_sqrt,
+                index % self.sample_count_sqrt,
+            )
+        };
+        let cmj_xy = |i: u32, j: u32| -> (u32, u32) {
+            // returns (x, y) of the "canonical arrangement"
+            // (x, y) in [0, self.sample_count]^2
+            (
+                (i * self.sample_count_sqrt + j),
+                (j * self.sample_count_sqrt + i),
+            )
+        };
+
+        let (i, j) = cmj_ij(self.current_sample);
         let i_permuted = permute_index(
             i,
             self.sample_count_sqrt,
@@ -87,36 +112,21 @@ impl StratifiedSampler {
             self.permutation_key
                 .wrapping_add(self.current_dimension + 1),
         );
-        let (x, y) = (self.cmj_xy(i_permuted, j).0, self.cmj_xy(i, j_permuted).1);
+        let (x, y) = (cmj_xy(i_permuted, j).0, cmj_xy(i, j_permuted).1);
+
         let jitter_x = self.jitter_dist.sample(&mut self.rng);
         let jitter_y = self.jitter_dist.sample(&mut self.rng);
         self.current_dimension += 2;
         (
-            x + jitter_x / self.sample_count as Float,
-            y + jitter_y / self.sample_count as Float,
+            (x as Float + jitter_x) / self.sample_count as Float,
+            (y as Float + jitter_y) / self.sample_count as Float,
         )
     }
 
+    /// Samples 2D points by dividing the space to (sample_count_sqrt * sample_count_sqrt) grid,
+    /// choosing a stratum randomly, and adding jitter
     #[allow(dead_code)]
-    fn cmj_ij(&mut self, index: u32) -> (u32, u32) {
-        let i = index / self.sample_count_sqrt;
-        let j = index % self.sample_count_sqrt;
-        (i, j)
-    }
-
-    #[allow(dead_code)]
-    fn cmj_xy(&mut self, i: u32, j: u32) -> (Float, Float) {
-        (
-            (i as Float + j as Float / self.sample_count_sqrt as Float)
-                / self.sample_count_sqrt as Float,
-            (j as Float + i as Float / self.sample_count_sqrt as Float)
-                / self.sample_count_sqrt as Float,
-        )
-    }
-
-    #[allow(dead_code)]
-    fn n_rook(&mut self) -> (Float, Float) {
-        // shuffled n-rook sampling over grid of self.sample_count_sqrt * self.sample_count_sqrt
+    fn random_stratum_sampling(&mut self) -> (Float, Float) {
         let stratum = permute_index(
             self.current_sample,
             self.sample_count,
